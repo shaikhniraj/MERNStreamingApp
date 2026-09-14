@@ -5,7 +5,7 @@ pipeline {
     // Run on any available Jenkins agent — we don't need a specific machine/label for this project
     agent any
     triggers {
-        // Trigger this pipeline whenever a push is made to the GitHub repository
+        // Trigger this pipeline whenever a push is made to the GitHub repository.
         githubPush()
     }
     // Environment variables available to every stage below
