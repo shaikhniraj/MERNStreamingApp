@@ -17,7 +17,9 @@ metadata:
   labels:
     app: {{ .name }}
 spec:
+  {{- if not .hpa }}
   replicas: {{ .replicas }}
+  {{- end }}
   # Zero-downtime rolling update, exactly as the assignment's Task 5 requires:
   # never drop below full capacity (maxUnavailable: 0) while allowing one
   # extra pod during the transition (maxSurge: 1).
@@ -57,6 +59,14 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+          {{- $res := .resources | default dict }}
+          resources:
+            requests:
+              cpu: {{ $res.cpuRequest | default "100m" }}
+              memory: {{ $res.memoryRequest | default "128Mi" }}
+            limits:
+              cpu: {{ $res.cpuLimit | default "500m" }}
+              memory: {{ $res.memoryLimit | default "256Mi" }} 
           # readinessProbe: is this pod ready to RECEIVE traffic right now?
           # livenessProbe: is this pod still healthy, or should Kubernetes restart it?
           # NOTE: this assumes each service responds on "/" with a 2xx/3xx status.

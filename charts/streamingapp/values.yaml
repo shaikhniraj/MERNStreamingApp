@@ -9,7 +9,7 @@ clientUrl: "http://a00862b0de8c44ba4a6cc041eb8146ea-2036017027.us-east-1.elb.ama
 
 image: 
   registry: 586917955726.dkr.ecr.us-east-1.amazonaws.com   # ECR registry Jenkins pushes to
-  tag: 1.0.8   # Jenkins will override this per-deploy with the real build tag
+  tag: 1.0.10   # Jenkins will override this per-deploy with the real build tag
 
 mongo:
   image: mongo:6
@@ -41,6 +41,11 @@ services:
     repo: streamingapp/streaming
     port: 3002
     replicas: 2
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 6
+      targetCPUUtilization: 70
     env:
       MONGO_URI: "mongodb://mongo:27017/streamingapp"
     #  CLIENT_URLS: "http://frontend-svc"     # URL for the frontend service
@@ -65,6 +70,11 @@ services:
     repo: streamingapp/frontend
     port: 80
     replicas: 2
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 6
+      targetCPUUtilization: 30  # lower CPU threshold for frontend HPA for testing
     healthPath: "/"
     env: {}   # static build — API URLs were baked in at Docker build time
     
