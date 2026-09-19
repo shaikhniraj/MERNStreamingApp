@@ -14,7 +14,10 @@ const formatVideoResponse = (doc) => {
     : { ...doc };
 
   video.thumbnailUrl = buildPublicUrl(video.thumbnailKey || video.thumbnailUrl);
-  video.streamPath = `/api/streaming/stream/${video._id}`;
+  // Relative to the frontend's "/api/streaming" API base, same shape as
+  // buildStreamUrl's fallback path — see util/s3.js for why this must not
+  // also start with /api/streaming.
+  video.streamPath = `/streaming/stream/${video._id}`;
   video.streamUrl = buildStreamUrl(video._id);
   delete video.thumbnailKey;
   delete video.s3Key;
