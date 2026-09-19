@@ -2,10 +2,14 @@
 # Central configuration — every template under templates/ reads from these
 # values instead of hard-coding anything. Change an image tag or replica
 # count here and run `helm upgrade` — no template edits needed.
+# The externally-visible URL the frontend is actually served from — this is
+# what the browser sends in its Origin header, so it MUST match exactly
+# (scheme + host, no trailing slash) for the backend's CORS check to pass.
+clientUrl: "http://a00862b0de8c44ba4a6cc041eb8146ea-2036017027.us-east-1.elb.amazonaws.com"
 
 image: 
   registry: 586917955726.dkr.ecr.us-east-1.amazonaws.com   # ECR registry Jenkins pushes to
-  tag: 1.0.6   # Jenkins will override this per-deploy with the real build tag
+  tag: 1.0.7   # Jenkins will override this per-deploy with the real build tag
 
 mongo:
   image: mongo:6
@@ -31,7 +35,7 @@ services:
     replicas: 2   # number of replicas for the auth service
     env:
       MONGO_URI: "mongodb://mongo:27017/streamingapp"     # connection string for MongoDB instance used by the auth service
-      CLIENT_URLS: "http://frontend-svc"     # URL for the frontend service
+     # CLIENT_URLS: "http://frontend-svc"     # URL for the frontend service
 
   - name: streaming
     repo: streamingapp/streaming
@@ -39,7 +43,7 @@ services:
     replicas: 2
     env:
       MONGO_URI: "mongodb://mongo:27017/streamingapp"
-      CLIENT_URLS: "http://frontend-svc"     # URL for the frontend service
+    #  CLIENT_URLS: "http://frontend-svc"     # URL for the frontend service
  
   - name: admin
     repo: streamingapp/admin
@@ -47,7 +51,7 @@ services:
     replicas: 1
     env:
       MONGO_URI: "mongodb://mongo:27017/streamingapp"
-      CLIENT_URLS: "http://frontend-svc"
+    #  CLIENT_URLS: "http://frontend-svc"
 
   - name: chat
     repo: streamingapp/chat
@@ -55,7 +59,7 @@ services:
     replicas: 2
     env:
       MONGO_URI: "mongodb://mongo:27017/streamingapp"
-      CLIENT_URLS: "http://frontend-svc"
+    #  CLIENT_URLS: "http://frontend-svc"
 
   - name: frontend
     repo: streamingapp/frontend

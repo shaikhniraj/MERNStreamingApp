@@ -13,3 +13,4 @@ metadata:
 data:
   AWS_REGION: {{ .Values.awsRegion | quote }} # AWS region for the services
   AWS_S3_BUCKET: {{ .Values.s3BucketName | quote }} # S3 bucket name for storing media files
+  CLIENT_URLS: {{ .Values.clientUrl | quote }} # URL for the frontend service
