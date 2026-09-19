@@ -11,6 +11,7 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /api/$2
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "2048m"
 spec:
   ingressClassName: nginx
   rules:
@@ -40,6 +41,10 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # Admin video/thumbnail uploads go through this ingress as raw multipart
+    # bodies (not a direct-to-S3 presigned upload), so the default 1m cap
+    # needs raising to fit real video files.
+    nginx.ingress.kubernetes.io/proxy-body-size: "2048m"
 spec:
   ingressClassName: nginx
   rules:

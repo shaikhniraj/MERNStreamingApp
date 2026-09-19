@@ -1,6 +1,9 @@
 const getEnv = (key, fallback) => {
   const value = process.env[key];
-  return value === undefined || value === '' ? fallback : value;
+  // An explicitly empty build-time value (e.g. REACT_APP_CHAT_SOCKET_URL=) is
+  // intentional — CHAT_SOCKET_URL relies on it to mean "same origin" — so
+  // only an actually-unset var falls back to the local-dev default.
+  return value === undefined ? fallback : value;
 };
 
 export const AUTH_API_URL = getEnv('REACT_APP_AUTH_API_URL', 'http://localhost:3001/api');

@@ -16,6 +16,11 @@ const allowedOrigins = (process.env.CLIENT_URLS || process.env.CLIENT_URL || 'ht
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
+  // The ingress only routes /api/chat to this service — the socket.io
+  // default path of /socket.io falls through to the frontend's catch-all
+  // "/" rule instead, so client and server must agree on a path under
+  // the routed prefix.
+  path: '/api/chat/socket.io',
   cors: {
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {

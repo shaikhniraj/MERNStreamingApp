@@ -45,7 +45,13 @@ class ChatService {
     }
 
     this.token = resolvedToken;
-    this.socket = io(CHAT_SOCKET_URL, {
+    // socket.io-client only treats a MISSING uri as "connect to same origin" —
+    // an empty string gets misparsed into a bare "scheme://" with no host —
+    // so an empty CHAT_SOCKET_URL (same-origin builds) must become undefined.
+    this.socket = io(CHAT_SOCKET_URL || undefined, {
+      // Must match chatService's server-side `path` — the ingress only
+      // routes /api/chat to chat-svc, not the socket.io default /socket.io.
+      path: '/api/chat/socket.io',
       transports: ['websocket'],
       autoConnect: false,
       auth: { token: resolvedToken },
