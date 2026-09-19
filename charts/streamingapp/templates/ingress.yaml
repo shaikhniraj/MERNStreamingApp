@@ -1,0 +1,56 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "streamingapp.fullname" . }}
+  annotations:
+    # chatService uses WebSockets (long-lived connections), which nginx's
+    # default 60s proxy timeout would silently kill mid-conversation.
+    # This stretches the timeout for the WHOLE ingress — harmless for the
+    # plain HTTP routes, necessary for chat.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx   # tells this Ingress to use the ingress-nginx controller we installed
+  rules:
+    - http:
+        paths:
+          # More specific /api/* paths listed before the catch-all "/" —
+          # ingress-nginx actually sorts by path specificity internally
+          # regardless of list order, but keeping it explicit here is
+          # easier to read and reason about.
+          - path: /api/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-svc
+                port:
+                  number: 3001
+          - path: /api/streaming
+            pathType: Prefix
+            backend:
+              service:
+                name: streaming-svc
+                port:
+                  number: 3002
+          - path: /api/admin
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-svc
+                port:
+                  number: 3003
+          - path: /api/chat
+            pathType: Prefix
+            backend:
+              service:
+                name: chat-svc
+                port:
+                  number: 3004
+          # Catch-all: anything not matched above goes to the React frontend
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-svc
+                port:
+                  number: 80

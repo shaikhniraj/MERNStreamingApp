@@ -1,0 +1,15 @@
+# templates/configmap.yaml
+# Holds environment variables shared across all services that are NOT sensitive —
+# safe to store as plain text and safe to commit to git. Deployments will pull
+# these in via `envFrom: configMapRef`, so every container gets AWS_REGION etc.
+# automatically without repeating it per-service in values.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # include "streamingapp.fullname" . uses the helper Helm already generated in
+  # _helpers.tpl — it combines the release name + chart name so object names
+  # stay unique if you ever install this chart twice in one cluster.
+  name: {{ include "streamingapp.fullname" . }}-config
+data:
+  AWS_REGION: {{ .Values.awsRegion | quote }} # AWS region for the services
+  AWS_S3_BUCKET: {{ .Values.s3BucketName | quote }} # S3 bucket name for storing media files

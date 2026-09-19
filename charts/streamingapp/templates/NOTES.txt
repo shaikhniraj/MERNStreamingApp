@@ -1,0 +1,20 @@
+StreamingApp has been deployed.
+
+Services running:
+{{- range .Values.services }}
+  - {{ .name }} (port {{ .port }})
+{{- end }}
+  - mongo (StatefulSet, port 27017)
+
+To reach the app, get the Ingress controller's external address:
+  kubectl get svc -n ingress-nginx ingress-nginx-controller
+
+Then open that hostname in a browser — routes are configured as:
+  /              -> frontend
+  /api/auth      -> authService
+  /api/streaming -> streamingService
+  /api/admin     -> adminService
+  /api/chat      -> chatService (WebSocket + REST)
+
+Check rollout status with:
+  kubectl get pods -w

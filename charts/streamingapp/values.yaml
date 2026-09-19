@@ -1,0 +1,65 @@
+# values.yaml
+# Central configuration — every template under templates/ reads from these
+# values instead of hard-coding anything. Change an image tag or replica
+# count here and run `helm upgrade` — no template edits needed.
+
+image: 
+  registry: 586917955726.dkr.ecr.us-east-1.amazonaws.com   # ECR registry Jenkins pushes to
+  tag: latest   # Jenkins will override this per-deploy with the real build tag
+
+mongo:
+  image: mongo:6
+  storageSize: 5Gi   # persistent disk size for Mongo's data volume 
+
+awsRegion: "us-east-1"
+s3BucketName: "streamingapp-dev-media-586917955726"   # fill in with the bucket name from `terragrunt output bucket_name` in the s3 component
+# Placeholder secret values — NEVER put real secrets here if this file is committed to git.
+# Real values get supplied at install/upgrade time instead (see note below).
+secrets:
+  jwtSecret: ""
+  awsAccessKeyId: ""
+  awsSecretAccessKey: ""
+  
+# One entry per microservice — templates loop over this with {{ range }}
+# to generate one Deployment + one Service per entry, instead of five
+# near-identical copies of the same YAML.
+
+services: 
+  - name: auth
+    repo: streamingapp/auth   # ECR repository for the auth service
+    port: 3001 
+    replicas: 2   # number of replicas for the auth service
+    env:
+      MONGO_URI: "mongodb://mongo:27017/streamingapp"     # connection string for MongoDB instance used by the auth service
+      CLIENT_URL: "http://frontend-svc"     # URL for the frontend service
+
+  - name: streaming
+    repo: streamingapp/streaming
+    port: 3002
+    replicas: 2
+    env:
+      MONGO_URI: "mongodb://mongo:27017/streamingapp"
+      CLIENT_URLS: "http://frontend-svc"     # URL for the frontend service
+ 
+  - name: admin
+    repo: streamingapp/admin
+    port: 3003
+    replicas: 1
+    env:
+      MONGO_URI: "mongodb://mongo:27017/streamingapp"
+      CLIENT_URLS: "http://frontend"
+
+  - name: chat
+    repo: streamingapp/chat
+    port: 3004
+    replicas: 2
+    env:
+      MONGO_URI: "mongodb://mongo:27017/streamingapp"
+      CLIENT_URLS: "http://frontend-svc"
+
+  - name: frontend
+    repo: streamingapp/frontend
+    port: 80
+    replicas: 2
+    env: {}   # static build — API URLs were baked in at Docker build time
+    

@@ -1,0 +1,79 @@
+{{/*
+  {{- range .Values.services }} loops once per entry in the services list
+  in values.yaml — this ONE template block generates all 5 Deployments,
+  the same way Terraform's for_each generated all 5 ECR repos from one
+  resource block. Adding a 6th service later = one more list entry here,
+  zero new YAML to write.
+*/}}
+{{- range .Values.services }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Inside `range`, "." refers to the CURRENT service entry (e.g. {name: auth, ...}),
+  # so "$" (a reference to the original top-level context) is needed to still
+  # reach .Release.Name / .Values from in here.
+  name: {{ $.Release.Name }}-{{ .name }}
+  labels:
+    app: {{ .name }}
+spec:
+  replicas: {{ .replicas }}
+  # Zero-downtime rolling update, exactly as the assignment's Task 5 requires:
+  # never drop below full capacity (maxUnavailable: 0) while allowing one
+  # extra pod during the transition (maxSurge: 1).
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: {{ .name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}
+    spec:
+      containers:
+        - name: {{ .name }}
+          # Builds the full ECR image path: <registry>/<repo>:<tag>, all three
+          # pieces coming from values.yaml / this service's list entry
+          image: "{{ $.Values.image.registry }}/{{ .repo }}:{{ $.Values.image.tag }}"
+          ports:
+            - containerPort: {{ .port }}
+          # envFrom pulls in EVERY key from the ConfigMap and Secret automatically —
+          # so AWS_REGION, AWS_S3_BUCKET, JWT_SECRET, AWS_ACCESS_KEY_ID etc. all land
+          # in the container's environment without listing each one by hand
+          envFrom:
+            - configMapRef:
+                name: {{ $.Release.Name }}-config
+            - secretRef:
+                name: {{ $.Release.Name }}-secrets
+          env:
+            - name: PORT
+              value: "{{ .port }}"
+            - name: MONGO_URI
+              value: "mongodb://mongo:27017/streamingapp"
+            {{- /* Any extra per-service env vars from values.yaml (e.g. CLIENT_URLS) */}}
+            {{- range $key, $value := .env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          # readinessProbe: is this pod ready to RECEIVE traffic right now?
+          # livenessProbe: is this pod still healthy, or should Kubernetes restart it?
+          # NOTE: this assumes each service responds on "/" with a 2xx/3xx status.
+          # Check your Express route setup — if there's no root route, this will
+          # 404 and fail the probe. Swap the path to a real health endpoint if
+          # one exists (e.g. "/health") once you've checked the service code.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .port }}
+            initialDelaySeconds: 20
+            periodSeconds: 20
+{{- end }}

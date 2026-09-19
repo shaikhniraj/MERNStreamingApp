@@ -1,0 +1,50 @@
+# StatefulSet, not Deployment: Mongo needs a STABLE identity and its OWN
+# persistent disk that survives pod restarts — a plain Deployment would give
+# it a fresh, empty disk every time the pod rescheduled.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+spec:
+  serviceName: mongo   # must match the headless Service name below
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          image: {{ .Values.mongo.image }}
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+  # volumeClaimTemplates: StatefulSet automatically creates one PersistentVolumeClaim
+  # per pod from this template — this IS your PVC, no separate PVC file needed.
+  volumeClaimTemplates:
+    - metadata:
+        name: mongo-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.mongo.storageSize }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+spec:
+  # clusterIP: None makes this a "headless" Service — standard practice for
+  # StatefulSets. Gives each pod a stable DNS name instead of load-balancing
+  # across replicas, which matters once you'd ever run Mongo with more than 1.
+  clusterIP: None
+  selector:
+    app: mongo
+  ports:
+    - port: 27017
