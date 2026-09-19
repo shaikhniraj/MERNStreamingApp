@@ -6,6 +6,7 @@
   zero new YAML to write.
 */}}
 {{- range .Values.services }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -51,8 +52,6 @@ spec:
           env:
             - name: PORT
               value: "{{ .port }}"
-            - name: MONGO_URI
-              value: "mongodb://mongo:27017/streamingapp"
             {{- /* Any extra per-service env vars from values.yaml (e.g. CLIENT_URLS) */}}
             {{- range $key, $value := .env }}
             - name: {{ $key }}
@@ -64,16 +63,33 @@ spec:
           # Check your Express route setup — if there's no root route, this will
           # 404 and fail the probe. Swap the path to a real health endpoint if
           # one exists (e.g. "/health") once you've checked the service code.
+          {{- if .healthPath }}
+          # HTTP-path check — used only where we know the app answers on this path
           readinessProbe:
             httpGet:
-              path: /
+              path: {{ .healthPath }}
               port: {{ .port }}
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /
+              path: {{ .healthPath }}
               port: {{ .port }}
             initialDelaySeconds: 20
             periodSeconds: 20
+          {{- else }}
+          # TCP check — confirms the port is accepting connections, without
+          # requiring a specific HTTP status code back. Safer default for
+          # API services where we haven't confirmed a working root route.
+          readinessProbe:
+            tcpSocket:
+              port: {{ .port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: {{ .port }}
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          {{- end }}
 {{- end }}

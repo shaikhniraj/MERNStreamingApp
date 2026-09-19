@@ -1,37 +1,50 @@
+# Ingress #1: paths that need a REWRITE, because the backend doesn't expect
+# the /auth or /streaming segment in its own route mounting.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "streamingapp.fullname" . }}
+  name: {{ include "streamingapp.fullname" . }}-rewrite
   annotations:
-    # chatService uses WebSockets (long-lived connections), which nginx's
-    # default 60s proxy timeout would silently kill mid-conversation.
-    # This stretches the timeout for the WHOLE ingress — harmless for the
-    # plain HTTP routes, necessary for chat.
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # $2 captures everything AFTER /api/auth or /api/streaming, and forwards
+    # just that remainder to the backend — e.g. /api/auth/login -> /api/login
+    nginx.ingress.kubernetes.io/rewrite-target: /api/$2
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 spec:
-  ingressClassName: nginx   # tells this Ingress to use the ingress-nginx controller we installed
+  ingressClassName: nginx
   rules:
     - http:
         paths:
-          # More specific /api/* paths listed before the catch-all "/" —
-          # ingress-nginx actually sorts by path specificity internally
-          # regardless of list order, but keeping it explicit here is
-          # easier to read and reason about.
-          - path: /api/auth
-            pathType: Prefix
+          - path: /api/auth(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: auth-svc
                 port:
                   number: 3001
-          - path: /api/streaming
-            pathType: Prefix
+          - path: /api/streaming(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: streaming-svc
                 port:
                   number: 3002
+---
+# Ingress #2: paths that already match the backend's own route mounting
+# exactly — no rewrite needed.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "streamingapp.fullname" . }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
           - path: /api/admin
             pathType: Prefix
             backend:
@@ -46,7 +59,6 @@ spec:
                 name: chat-svc
                 port:
                   number: 3004
-          # Catch-all: anything not matched above goes to the React frontend
           - path: /
             pathType: Prefix
             backend:

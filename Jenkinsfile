@@ -30,12 +30,21 @@ pipeline {
                     // One entry per microservice: its ECR repo suffix, Docker build context,
                     // and Dockerfile path — mirrors the docker build commands from your assignment guide
                     def services = [
-                        [name: 'auth',      context: 'backend/authService', dockerfile: 'backend/authService/Dockerfile'],
-                        [name: 'streaming', context: 'backend',             dockerfile: 'backend/streamingService/Dockerfile'],
-                        [name: 'admin',     context: 'backend',             dockerfile: 'backend/adminService/Dockerfile'],
-                        [name: 'chat',      context: 'backend',             dockerfile: 'backend/chatService/Dockerfile'],
-                        [name: 'frontend',  context: 'frontend',            dockerfile: 'frontend/Dockerfile'],
-                    ]
+                                    [name: 'auth',      context: 'backend/authService', dockerfile: 'backend/authService/Dockerfile'],
+                                    [name: 'streaming', context: 'backend',             dockerfile: 'backend/streamingService/Dockerfile'],
+                                    [name: 'admin',     context: 'backend',             dockerfile: 'backend/adminService/Dockerfile'],
+                                    [name: 'chat',      context: 'backend',             dockerfile: 'backend/chatService/Dockerfile'],
+                                    [name: 'frontend',  context: 'frontend',            dockerfile: 'frontend/Dockerfile',
+                                    // Relative paths — the browser resolves these against whatever host
+                                    // served the page, so this works identically regardless of which
+                                    // NLB hostname or future custom domain fronts the app.
+                                    buildArgs: '--build-arg REACT_APP_AUTH_API_URL=/api/auth' +
+                                                ' --build-arg REACT_APP_STREAMING_API_URL=/api/streaming' +
+                                                ' --build-arg REACT_APP_STREAMING_PUBLIC_URL=/api/streaming' +
+                                                ' --build-arg REACT_APP_ADMIN_API_URL=/api/admin' +
+                                                ' --build-arg REACT_APP_CHAT_API_URL=/api/chat' +
+                                                ' --build-arg REACT_APP_CHAT_SOCKET_URL='],   // empty = same origin, standard socket.io-client behavior
+                                    ]
 
                     // docker.withRegistry, combined with the Amazon ECR plugin, understands the
                     // special credential format "ecr:<region>:<jenkins-credential-id>". It uses
@@ -45,18 +54,14 @@ pipeline {
 
                         // Loop over each service, building then immediately pushing its image
                         services.each { svc ->
-                            def repoName  = "streamingapp/${svc.name}"          // Must match the ECR repo names Terraform created
-                            def fullImage = "${ECR_REGISTRY}/${repoName}:${IMAGE_TAG}"
+                                        def repoName   = "streamingapp/${svc.name}"
+                                        def fullImage  = "${ECR_REGISTRY}/${repoName}:${IMAGE_TAG}"
+                                        def extraArgs  = svc.buildArgs ?: ''   // empty string for services with no buildArgs key
 
-                            echo "Building ${svc.name} -> ${fullImage}"
-
-                            // docker.build(tag, "-f <dockerfile> <context>") builds the image
-                            // using this service's specific Dockerfile and build context
-                            def image = docker.build(fullImage, "-f ${svc.dockerfile} ${svc.context}")
-
-                            // .push() uploads the just-built image to ECR, inside the auth session opened above
-                            image.push()
-                        }
+                                        echo "Building ${svc.name} -> ${fullImage}"
+                                        def image = docker.build(fullImage, "${extraArgs} -f ${svc.dockerfile} ${svc.context}")
+                                        image.push()
+                                    }
                     }
                 }
             }

@@ -1,6 +1,7 @@
 {{/* One ClusterIP Service per entry in .Values.services — internal-only,
      stable DNS names other pods (and later, Ingress) route to. */}}
 {{- range .Values.services }}
+---
 apiVersion: v1
 kind: Service
 metadata:
