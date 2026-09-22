@@ -9,7 +9,7 @@ clientUrl: "http://a4b73435211f6489fb2063156b010935-1383383866.us-east-1.elb.ama
 
 image: 
   registry: 586917955726.dkr.ecr.us-east-1.amazonaws.com   # ECR registry Jenkins pushes to
-  tag: 1.0.1   # Jenkins will override this per-deploy with the real build tag
+  tag: 1.0.15   # Jenkins will override this per-deploy with the real build tag
 
 mongo:
   image: mongo:6
