@@ -74,7 +74,7 @@ services:
       enabled: true
       minReplicas: 2
       maxReplicas: 6
-      targetCPUUtilization: 30  # lower CPU threshold for frontend HPA for testing
+      targetCPUUtilization: 10  # lower CPU threshold for frontend HPA for testing
     healthPath: "/"
     env: {}   # static build — API URLs were baked in at Docker build time
     
